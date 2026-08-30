@@ -24,7 +24,11 @@ Write-Host 'Downloading Arrival Toolbox...'
 Invoke-WebRequest -Uri $exeUrl -OutFile $exePath -UseBasicParsing
 
 Write-Host 'Verifying checksum...'
-$publishedHashLine = (Invoke-WebRequest -Uri $hashUrl -UseBasicParsing).Content
+# GitHub serves release assets as application/octet-stream regardless of file extension, so
+# Invoke-WebRequest's .Content comes back as a byte[] here, not a string - decode it explicitly
+# rather than relying on -UseBasicParsing to guess a text encoding from the response headers.
+$hashBytes = (Invoke-WebRequest -Uri $hashUrl -UseBasicParsing).Content
+$publishedHashLine = [System.Text.Encoding]::UTF8.GetString($hashBytes)
 $expectedHash = $publishedHashLine.Trim().Split(' ')[0].Trim().ToUpperInvariant()
 $actualHash = (Get-FileHash -Path $exePath -Algorithm SHA256).Hash.ToUpperInvariant()
 
